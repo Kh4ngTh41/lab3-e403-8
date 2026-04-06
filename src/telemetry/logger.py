@@ -1,8 +1,15 @@
 import logging
 import json
 import os
+import sys
 from datetime import datetime
 from typing import Any, Dict
+
+
+def _sanitize_text(text: str) -> str:
+    """Remove surrogate characters that can't be encoded in UTF-8."""
+    return text.encode("utf-8", errors="replace").decode("utf-8")
+
 
 class IndustryLogger:
     """
@@ -16,12 +23,12 @@ class IndustryLogger:
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
-        # File Handler (JSON)
+        # File Handler (JSON) — explicit UTF-8 to avoid Windows encoding issues
         log_file = os.path.join(log_dir, f"{datetime.now().strftime('%Y-%m-%d')}.log")
-        file_handler = logging.FileHandler(log_file)
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
         
-        # Console Handler
-        console_handler = logging.StreamHandler()
+        # Console Handler — force UTF-8 output on Windows
+        console_handler = logging.StreamHandler(stream=sys.stdout)
         
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
@@ -33,7 +40,7 @@ class IndustryLogger:
             "event": event_type,
             "data": data
         }
-        self.logger.info(json.dumps(payload))
+        self.logger.info(_sanitize_text(json.dumps(payload, ensure_ascii=False)))
 
     def info(self, msg: str):
         self.logger.info(msg)
